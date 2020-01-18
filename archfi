@@ -12,7 +12,7 @@
 # referance : https://wiki.archlinux.org/index.php/Installation_guide
 
 
-apptitle="Arch Linux Fast Install (archfi) - Version: 2019.08.27.01.03.45 (GPLv3)"
+apptitle="Arch Linux Fast Install (archfi) - Version: 2020.01.11.03.53.30 (GPLv3)"
 baseurl=https://raw.githubusercontent.com/MatMoul/archfi/master
 skipfont="0"
 
@@ -105,7 +105,7 @@ chooselanguage(){
     fi
     font=
     if [ "$(cat /etc/locale.gen | grep ""#${locale}"")" != "" ]; then
-      sed -i "/${locale}/s/^#//g" /etc/locale.gen
+      sed -i "/#${locale}/s/^#//g" /etc/locale.gen
       locale-gen
     fi
     export LANG=${locale}
@@ -163,6 +163,25 @@ rebootpc(){
 
 
 # --------------------------------------------------------
+selectdisk(){
+    items=$(lsblk -d -p -n -l -o NAME,SIZE -e 7,11)
+    options=()
+    IFS_ORIG=$IFS
+    IFS=$'\n'
+    for item in ${items}
+    do  
+        options+=("${item}" "")
+    done
+    IFS=$IFS_ORIG
+    result=$(whiptail --backtitle "${APPTITLE}" --title "${1}" --menu "" 0 0 0 "${options[@]}" 3>&1 1>&2 2>&3)
+    if [ "$?" != "0" ]
+    then
+        return 1
+    fi
+    echo ${result%%\ *}
+    return 0    
+}
+
 diskpartmenu(){
   if [ "${1}" = "" ]; then
     nextitem="."
@@ -217,14 +236,7 @@ diskpartmenu(){
 
 
 diskpartautodos(){
-  items=$(lsblk -d -p -n -l -o NAME -e 7,11)
-  options=()
-  for item in ${items}; do
-    options+=("${item}" "")
-  done
-  device=$(whiptail --backtitle "${apptitle}" --title "${txtautoparts} (dos)" --menu "" 0 0 0 \
-    "${options[@]}" \
-    3>&1 1>&2 2>&3)
+    device=$(selectdisk "${txtautoparts} (dos)")
   if [ "$?" = "0" ]; then
     if (whiptail --backtitle "${apptitle}" --title "${txtautoparts} (dos)" --yesno "${txtautopartsconfirm//%1/${device}}" --defaultno 0 0) then
       clear
@@ -259,14 +271,7 @@ diskpartautodos(){
 }
 
 diskpartautogpt(){
-  items=$(lsblk -d -p -n -l -o NAME -e 7,11)
-  options=()
-  for item in ${items}; do
-    options+=("${item}" "")
-  done
-  device=$(whiptail --backtitle "${apptitle}" --title "${txtautoparts} (gpt)" --menu "" 0 0 0 \
-    "${options[@]}" \
-    3>&1 1>&2 2>&3)
+    device=$(selectdisk "${txtautoparts} (gpt)")
   if [ "$?" = "0" ]; then
     if (whiptail --backtitle "${apptitle}" --title "${txtautoparts} (gpt)" --yesno "${txtautopartsconfirm//%1/${device}}" --defaultno 0 0) then
       clear
@@ -299,14 +304,7 @@ diskpartautogpt(){
 }
 
 diskpartautoefi(){
-  items=$(lsblk -d -p -n -l -o NAME -e 7,11)
-  options=()
-  for item in ${items}; do
-    options+=("${item}" "")
-  done
-  device=$(whiptail --backtitle "${apptitle}" --title "${txtautoparts} (gpt,efi)" --menu "" 0 0 0 \
-    "${options[@]}" \
-    3>&1 1>&2 2>&3)
+    device=$(selectdisk "${txtautoparts} (gpt,efi)")
   if [ "$?" = "0" ]; then
     if (whiptail --backtitle "${apptitle}" --title "${txtautoparts} (gpt,efi)" --yesno "${txtautopartsconfirm//%1/${device}}" --defaultno 0 0) then
       clear
@@ -337,14 +335,7 @@ diskpartautoefi(){
 }
 
 diskpartautoefiusb(){
-  items=$(lsblk -d -p -n -l -o NAME -e 7,11)
-  options=()
-  for item in ${items}; do
-    options+=("${item}" "")
-  done
-  device=$(whiptail --backtitle "${apptitle}" --title "${txtautoparts} (gpt,efi)" --menu "" 0 0 0 \
-    "${options[@]}" \
-    3>&1 1>&2 2>&3)
+    device=$(selectdisk "${txtautoparts} (gpt,efi)")  
   if [ "$?" = "0" ]; then
     if (whiptail --backtitle "${apptitle}" --title "${txtautoparts} (gpt,efi)" --yesno "${txtautopartsconfirm//%1/${device}}" --defaultno 0 0) then
       clear
@@ -375,14 +366,7 @@ diskpartautoefiusb(){
 }
 
 diskpartcfdisk(){
-  items=$(lsblk -d -p -n -l -o NAME -e 7,11)
-  options=()
-  for item in ${items}; do
-    options+=("${item}" "")
-  done
-  device=$(whiptail --backtitle "${apptitle}" --title "${txteditparts} (cfdisk)" --menu "" 0 0 0 \
-    "${options[@]}" \
-    3>&1 1>&2 2>&3)
+    device=$( selectdisk "${txteditparts} (cfdisk)" )
   if [ "$?" = "0" ]; then
     clear
     cfdisk ${device}
@@ -390,14 +374,7 @@ diskpartcfdisk(){
 }
 
 diskpartcgdisk(){
-  items=$(lsblk -d -p -n -l -o NAME -e 7,11)
-  options=()
-  for item in ${items}; do
-    options+=("${item}" "")
-  done
-  device=$(whiptail --backtitle "${apptitle}" --title "${txteditparts} (cfdisk)" --menu "" 0 0 0 \
-    "${options[@]}" \
-    3>&1 1>&2 2>&3)
+    device=$( selectdisk "${txteditparts} (cgdisk)" )
   if [ "$?" = "0" ]; then
     clear
     cgdisk ${device}
@@ -588,13 +565,13 @@ formatswapdevice(){
 formatdevice(){
   options=()
   options+=("btrfs" "")
-  options+=("reiserfs" "")
   options+=("ext4" "")
   options+=("ext3" "")
   options+=("ext2" "")
   options+=("xfs" "")
   options+=("f2fs" "")
   options+=("jfs" "")
+  options+=("reiserfs" "")
   if [ ! "${3}" = "noluks" ]; then
     options+=("luks" "encrypted")
   fi
@@ -622,10 +599,6 @@ formatdevice(){
         umount /mnt
       fi
     ;;
-    reiserfs)
-      echo "mkfs.reiserfs -f ${2}"
-      mkfs.reiserfs -f ${2}
-    ;;
     ext4)
       echo "mkfs.ext4 ${2}"
       mkfs.ext4 ${2}
@@ -649,6 +622,10 @@ formatdevice(){
     jfs)
       echo "mkfs.xfs -f ${2}"
       mkfs.jfs -f ${2}
+    ;;
+    reiserfs)
+      echo "mkfs.reiserfs -f ${2}"
+      mkfs.reiserfs -f ${2}
     ;;
     luks)
       echo "${txtcreateluksdevice}"
@@ -748,21 +725,27 @@ installmenu(){
     nextitem=${1}
   fi
   options=()
+  options+=("${txtselectmirrorsbycountry}" "(${txtoptional})")
   options+=("${txteditmirrorlist}" "(${txtoptional})")
-  options+=("${txtinstallarchlinux}" "pacstrap base")
+  options+=("${txtinstallarchlinux}" "pacstrap base kernel firmwares")
   options+=("${txtconfigarchlinux}" "")
   sel=$(whiptail --backtitle "${apptitle}" --title "${txtinstallmenu}" --menu "" --cancel-button "${txtunmount}" --default-item "${nextitem}" 0 0 0 \
     "${options[@]}" \
     3>&1 1>&2 2>&3)
   if [ "$?" = "0" ]; then
     case ${sel} in
+      "${txtselectmirrorsbycountry}")
+        selectmirrorsbycountry
+        nextitem="${txtinstallarchlinux}"
+      ;;
       "${txteditmirrorlist}")
         ${EDITOR} /etc/pacman.d/mirrorlist
         nextitem="${txtinstallarchlinux}"
       ;;
       "${txtinstallarchlinux}")
-        installbase
-        nextitem="${txtconfigarchlinux}"
+        if(installbase) then
+          nextitem="${txtconfigarchlinux}"
+        fi
       ;;
       "${txtconfigarchlinux}")
         archmenu
@@ -775,10 +758,54 @@ installmenu(){
   fi
 }
 
+selectmirrorsbycountry() {
+    if [[ ! -f /etc/pacman.d/mirrorlist.backup ]]; then
+        cp /etc/pacman.d/mirrorlist /etc/pacman.d/mirrorlist.backup
+    fi    
+    items=$( sed -n "/^##.*/N; {s/^## \(.*\)\nServer.*/\1/p}" < /etc/pacman.d/mirrorlist.backup | sort -u )
+    options=()
+    IFS_ORIG=$IFS
+    IFS=$'\n'
+    for item in ${items}; do
+        options+=("${item}" "")
+    done
+    IFS=$IFS_ORIG
+    country=$(whiptail --backtitle "${APPTITLE}" --title "${txtselectcountry}" --menu "" 0 0 0 "${options[@]}" 3>&1 1>&2 2>&3)
+    if [ "$?" != "0" ]; then
+        return 1    
+    fi
+    sed "s/^\(Server .*\)/\#\1/;/^## $country/N; {s/^\(## .*\n\)\#Server \(.*\)/\1Server \2/}" < /etc/pacman.d/mirrorlist.backup > /etc/pacman.d/mirrorlist
+}
+
 installbase(){
   clear
-  echo "pacstrap /mnt base"
-  pacstrap /mnt base
+  pkgs="base"
+  options=()
+  options+=("linux" "")
+  options+=("linux-lts" "")
+  options+=("linux-zen" "")
+  options+=("linux-hardened" "")
+  sel=$(whiptail --backtitle "${apptitle}" --title "Kernel" --menu "" 0 0 0 \
+    "${options[@]}" \
+    3>&1 1>&2 2>&3)
+  if [ "$?" = "0" ]; then
+    pkgs+=" ${sel}"
+  else
+    return 1
+  fi
+  options=()
+  options+=("linux-firmware" "(${txtoptional})" on)
+  sel=$(whiptail --backtitle "${apptitle}" --title "Firmwares" --checklist "" 0 0 0 \
+    "${options[@]}" \
+    3>&1 1>&2 2>&3)
+  if [ ! "$?" = "0" ]; then
+    return 1
+  fi
+  for itm in $sel; do
+    pkgs="$pkgs $(echo $itm | sed 's/"//g')"
+  done
+  echo "pacstrap /mnt ${pkgs}"
+  pacstrap /mnt ${pkgs}
   pressanykey
 }
 
@@ -1012,8 +1039,8 @@ archsetlocale(){
     echo "LANG=${locale}.UTF-8" > /mnt/etc/locale.conf
     echo "echo \"LC_COLLATE=C\" >> /mnt/etc/locale.conf"
     echo "LC_COLLATE=C" >> /mnt/etc/locale.conf
-    echo "sed -i '/"${locale}".UTF-8/s/^#//g' /mnt/etc/locale.gen"
-    sed -i '/'${locale}'.UTF-8/s/^#//g' /mnt/etc/locale.gen
+    echo "sed -i '/#${locale}.UTF-8/s/^#//g' /mnt/etc/locale.gen"
+    sed -i '/#'${locale}'.UTF-8/s/^#//g' /mnt/etc/locale.gen
     archchroot setlocale
     pressanykey
   fi
@@ -1270,14 +1297,7 @@ archgrubinstallchroot(){
 }
 
 archgrubinstallbootloader(){
-  items=$(lsblk -d -p -n -l -o NAME -e 7,11)
-  options=()
-  for item in ${items}; do
-    options+=("${item}" "")
-  done
-  device=$(whiptail --backtitle "${apptitle}" --title "${txtinstall//%1/bootloader}" --menu "" 0 0 0 \
-    "${options[@]}" \
-    3>&1 1>&2 2>&3)
+    device=$( selectdisk "${txtinstall//%1/bootloader}" )  
   if [ "$?" = "0" ]; then
     if [ "${eficomputer}" == "1" ]; then
       options=()
@@ -1603,6 +1623,10 @@ archrefindinstallchroot(){
 archenabledhcpcd(){
   if (whiptail --backtitle "${apptitle}" --title "${txtenable//%1/dhcpcd}" --yesno "${txtenable//%1/dhcpcd} ?" 0 0) then
     clear
+    
+    echo "pacstrap /mnt dhcpcd"
+    
+    pacstrap /mnt dhcpcd
     archchroot enabledhcpcd
     pressanykey
   fi
@@ -1745,8 +1769,11 @@ loadstrings(){
 
   txtarchinstallmenu="Arch Install Menu"
 
+  txtselectmirrorsbycountry="Select mirrors by country"
+  txtselectcountry="Select country"
   txteditmirrorlist="Edit mirrorlist"
   txtinstallarchlinux="Install Arch Linux"
+  txtinstallfirmware="Install Firmware"
   txtconfigarchlinux="Config Arch Linux"
 
   txtsethostname="Set Computer Name"
@@ -1802,14 +1829,18 @@ while (( "$#" )); do
     --help)
       echo "archfi"
       echo "------"
-      echo "-sf | --skip-font                  Skip setfont from language files"
-      echo "-efiX                              -efi0 : disable EFI, -efi1 efi inst, -efi2 efi hybrid inst"
-      echo "-t | --test ghusername ghbranch    Test language files"
+      echo "-sf | --skip-font                 Skip setfont from language files"
+      echo "-efiX                             -efi0 : disable EFI, -efi1 efi inst, -efi2 efi hybrid inst"
+      echo "-t | --test ghusername ghbranch   Test archfi script and language"
       exit 0
     ;;
     -sf | --skip-font) skipfont=1;;
-    -t | --test) baseurl="https://raw.githubusercontent"
-                baseurl="${baseurl}.com/""${2}/archfi/${3}";;
+    -t | --test)
+      wget -O archfi https://raw.githubusercontent.com/${2}/archfi/${3}/archfi
+      sh archfi -tt ${2} ${3}
+      exit 0
+    ;;
+    -tt) baseurl="https://raw.githubusercontent.com/${2}/archfi/${3}";;
     -efi0) efimode=0;;
     -efi1)
       eficomputer=1
